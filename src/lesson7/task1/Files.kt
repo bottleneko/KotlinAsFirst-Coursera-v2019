@@ -53,8 +53,21 @@ fun alignFile(inputName: String, lineLength: Int, outputName: String) {
  * Регистр букв игнорировать, то есть буквы е и Е считать одинаковыми.
  *
  */
-fun countSubstrings(inputName: String, substrings: List<String>): Map<String, Int> = TODO()
-
+fun countSubstrings(inputName: String, substrings: List<String>): Map<String, Int> {
+    val result = mutableMapOf<String, Int>()
+    val substringsSet = substrings.toSet()
+    for (elements in substringsSet) result[elements] = 0
+    for (lines in File(inputName).readLines()) {
+        for (elements in substringsSet) {
+            val windows = lines.windowed(elements.length, 1)
+            for (wind in windows) {
+                if (elements.toLowerCase() == wind.toLowerCase()) result[elements] =
+                    result.getOrDefault(elements, 0) + 1
+            }
+        }
+    }
+    return result
+}
 
 /**
  * Средняя
@@ -70,7 +83,23 @@ fun countSubstrings(inputName: String, substrings: List<String>): Map<String, In
  *
  */
 fun sibilants(inputName: String, outputName: String) {
-    TODO()
+    val underRules = "ЖжЧчШшЩщ".toSet()
+    val wrongLetters = "яЯыЫюЮ".toList()
+    val validLetters = "аАиИуУ".toList()
+    val output = File(outputName).bufferedWriter()
+    for (lines in File(inputName).readLines()) {
+        val builder = StringBuilder()
+        for (i in lines.indices) {
+            if (lines[i] !in wrongLetters) builder.append(lines[i])
+            else {
+                if (i > 0 && lines[i - 1] in underRules) builder.append(validLetters[wrongLetters.indexOf(lines[i])])
+                else builder.append(lines[i])
+            }
+        }
+        output.write(builder.toString())
+        output.newLine()
+    }
+    output.close()
 }
 
 /**
@@ -91,7 +120,17 @@ fun sibilants(inputName: String, outputName: String) {
  *
  */
 fun centerFile(inputName: String, outputName: String) {
-    TODO()
+    val output = File(outputName).bufferedWriter()
+    val strings = File(inputName).readLines()
+    val maxLength = strings.map({ it.trim().length }).max()!!
+
+    for (lines in strings) {
+        var line = " ".repeat((maxLength - lines.trim().length) / 2)
+        line += lines.trim()
+        output.write(line)
+        output.newLine()
+    }
+    output.close()
 }
 
 /**
@@ -122,7 +161,38 @@ fun centerFile(inputName: String, outputName: String) {
  * 8) Если входной файл удовлетворяет требованиям 1-7, то он должен быть в точности идентичен выходному файлу
  */
 fun alignFileByWidth(inputName: String, outputName: String) {
-    TODO()
+    val output = File(outputName).bufferedWriter()
+    val lines = File(inputName).readLines()
+
+    var maxLength = lines.map({ """\s+""".toRegex().replace(it, " ").trim().length }).max()!!
+
+    for (line in lines) {
+        if (lines.size == 1 || line.matches(Regex("""\s*\S*\s*"""))) {
+            output.write(line.trim())
+            output.newLine()
+            continue
+        }
+
+        val passiveLine = """\s+""".toRegex().replace(line.trim(), " ").trim()
+
+        var str = ""
+        val words = line.trim().split(Regex("""\s+"""))
+
+
+        val spaceCount = maxLength - passiveLine.length
+        var oneSpace = " ".repeat(spaceCount / (words.size - 1) + 1)
+
+        val extraSpaceCount = spaceCount % (words.size - 1)
+        var extraSpace = " ".repeat(listOf(extraSpaceCount, 1).min()!!)
+        for (i in words.indices) {
+            val x = words[i]
+            if (i <= extraSpaceCount - 1) str += "$x$oneSpace$extraSpace"
+            else str += "$x$oneSpace"
+        }
+        output.write(str.trim())
+        output.newLine()
+    }
+    output.close()
 }
 
 /**
@@ -143,7 +213,12 @@ fun alignFileByWidth(inputName: String, outputName: String) {
  * Ключи в ассоциативном массиве должны быть в нижнем регистре.
  *
  */
-fun top20Words(inputName: String): Map<String, Int> = TODO()
+fun top20Words(inputName: String): Map<String, Int> {
+    val result = mutableMapOf<String, Int>()
+    val text = File(inputName).readText().toLowerCase()
+    """[\p{IsLatin}\p{IsCyrillic}]+""".toRegex().findAll(text).forEach({ result[it.value] = result.getOrDefault(it.value, 0) + 1 })
+    return result.toList().sortedByDescending { it.second }.take(20).toMap()
+}
 
 /**
  * Средняя
@@ -181,7 +256,20 @@ fun top20Words(inputName: String): Map<String, Int> = TODO()
  * Обратите внимание: данная функция не имеет возвращаемого значения
  */
 fun transliterate(inputName: String, dictionary: Map<Char, String>, outputName: String) {
-    TODO()
+    val output = File(outputName).bufferedWriter()
+    val text = File(inputName).readText()
+    val lowercasedDictionary = dictionary
+        .map({ (k, v) -> Pair(k.toLowerCase(), v.toLowerCase()) })
+        .toMap()
+        .toMutableMap()
+
+    val result = text.toCharArray().flatMap( {
+        val x = lowercasedDictionary.getOrDefault(it.toLowerCase(), it.toString())
+        val result = if(it.isUpperCase()) x.capitalize() else x
+        result.toList()
+    } )
+    output.write(result.joinToString(""))
+    output.close()
 }
 
 /**
@@ -209,7 +297,16 @@ fun transliterate(inputName: String, dictionary: Map<Char, String>, outputName: 
  * Обратите внимание: данная функция не имеет возвращаемого значения
  */
 fun chooseLongestChaoticWord(inputName: String, outputName: String) {
-    TODO()
+    val output = File(outputName).bufferedWriter()
+    val strings = File(inputName).readLines()
+
+    var result = strings.filter({ it.toLowerCase().toSet().size == it.length }).toMutableList()
+
+    result.sortBy({ -it.length })
+
+    if (result.size == 0) output.write("")
+    else output.write(result.filter({ it.length == result.first().length }).joinToString(separator = ", "))
+    output.close()
 }
 
 /**
@@ -429,4 +526,3 @@ fun printMultiplicationProcess(lhv: Int, rhv: Int, outputName: String) {
 fun printDivisionProcess(lhv: Int, rhv: Int, outputName: String) {
     TODO()
 }
-
